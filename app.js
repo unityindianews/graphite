@@ -1,41 +1,42 @@
-var createError = require('http-errors');
 var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
-
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+var mongo = require("mongodb");
+var dotenv = require('dotenv');
+const envConfig = dotenv.config();
 
 var app = express();
 
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
+var DB_config = require('./config/database');
+var PRT_config = require('./config/port');
 
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+var db = {};
+var MongoClient = mongo.MongoClient;
+var dbUIN = {};
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+MongoClient.connect(DB_config.DB_UIN_URL,{ useNewUrlParser: true }, function(err, dbConnection) {
 
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
+    dbUIN.Connection=dbConnection; //connection object
+    dbUIN.dbConnection = dbConnection.db();
+    let dbConn=dbUIN.dbConnection;
+
+    dbUIN.Admin = dbConn.collection('admin');
+    console.log("UIN server Connected   " + new Date());
 });
+  
+// expose global variables through the req object
+app.use(function(req, res, next) {
+  req.dbUIN = dbUIN;
+    next();
+})
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+// controllers
+app.use('/', require('./controllers/index'));
+app.use('/demo', require('./controllers/demo'));
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+// port
+app.set('port', PRT_config.port.address);
+
+var server = app.listen(app.get('port'), function() {
+    console.log('Express server listening on port ' + server.address().port);
 });
 
 module.exports = app;
