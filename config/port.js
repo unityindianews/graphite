@@ -3,6 +3,6 @@ var config = {};
 
 config.port = {};
 
-config.port.address = 4100;
+config.port.address = 4000;
 
 module.exports = config;
